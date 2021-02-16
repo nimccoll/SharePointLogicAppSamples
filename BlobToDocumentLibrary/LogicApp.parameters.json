@@ -1,0 +1,21 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "logicAppName": {
+      "value": "BlobToDocumentLibrary"
+    },
+    "azureblob_1_accessKey": {
+      "value": "{your storage account key}"
+    },
+    "azureblob_1_authType": {
+      "value": "basic"
+    },
+    "azureblob_1_privacySetting": {
+      "value": "Private"
+    },
+    "sharepointonline_1_token:TenantId": {
+      "value": "{your SharePoint Online tenant ID}"
+    }
+  }
+}

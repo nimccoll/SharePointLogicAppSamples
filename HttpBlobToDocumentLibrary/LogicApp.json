@@ -1,0 +1,271 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "logicAppName": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80,
+      "metadata": {
+        "description": "Name of the Logic App."
+      }
+    },
+    "logicAppLocation": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "allowedValues": [
+        "[resourceGroup().location]",
+        "eastasia",
+        "southeastasia",
+        "centralus",
+        "eastus",
+        "eastus2",
+        "westus",
+        "northcentralus",
+        "southcentralus",
+        "northeurope",
+        "westeurope",
+        "japanwest",
+        "japaneast",
+        "brazilsouth",
+        "australiaeast",
+        "australiasoutheast",
+        "southindia",
+        "centralindia",
+        "westindia",
+        "canadacentral",
+        "canadaeast",
+        "uksouth",
+        "ukwest",
+        "westcentralus",
+        "westus2",
+        "koreacentral",
+        "koreasouth",
+        "francecentral",
+        "francesouth",
+        "uaecentral",
+        "uaenorth",
+        "southafricanorth",
+        "southafricawest",
+        "switzerlandnorth",
+        "switzerlandwest",
+        "germanynorth",
+        "germanywestcentral",
+        "norwayeast",
+        "brazilsoutheast"
+      ],
+      "metadata": {
+        "description": "Location of the Logic App."
+      }
+    },
+    "sharepointonline_1_Connection_Name": {
+      "type": "string",
+      "defaultValue": "sharepointonline"
+    },
+    "sharepointonline_1_Connection_DisplayName": {
+      "type": "string",
+      "defaultValue": "{your SharePoint Online account}"
+    },
+    "sharepointonline_1_token:TenantId": {
+      "type": "string",
+      "metadata": {
+        "description": "The tenant ID of for the Azure Active Directory application"
+      }
+    }
+  },
+  "variables": {},
+  "resources": [
+    {
+      "name": "[parameters('logicAppName')]",
+      "type": "Microsoft.Logic/workflows",
+      "location": "[parameters('logicAppLocation')]",
+      "tags": {
+        "displayName": "LogicApp"
+      },
+      "apiVersion": "2016-06-01",
+      "properties": {
+        "definition": {
+          "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+          "actions": {
+            "For_each": {
+              "type": "Foreach",
+              "foreach": "@triggerBody()",
+              "actions": {
+                "HTTP": {
+                  "type": "Http",
+                  "inputs": {
+                    "method": "GET",
+                    "uri": "@items('For_each')?['data']?['url']",
+                    "headers": {
+                      "x-ms-blob-type": "@items('For_each')?['data']?['blobType']",
+                      "x-ms-version": "2020-04-08"
+                    },
+                    "authentication": {
+                      "type": "ManagedServiceIdentity",
+                      "audience": "https://nimccollftademostg.blob.core.windows.net/"
+                    }
+                  },
+                  "runAfter": {}
+                },
+                "Create_file": {
+                  "type": "ApiConnection",
+                  "inputs": {
+                    "host": {
+                      "connection": {
+                        "name": "@parameters('$connections')['sharepointonline']['connectionId']"
+                      }
+                    },
+                    "method": "post",
+                    "body": "@body('HTTP')",
+                    "path": "/datasets/@{encodeURIComponent(encodeURIComponent('https://microsoft818.sharepoint.com/'))}/files",
+                    "queries": {
+                      "folderPath": "/Shared Documents",
+                      "name": "@{last(split(items('For_each')?['subject'], '/'))}",
+                      "queryParametersSingleEncoded": true
+                    }
+                  },
+                  "runAfter": {
+                    "HTTP": [
+                      "Succeeded"
+                    ]
+                  },
+                  "runtimeConfiguration": {
+                    "contentTransfer": {
+                      "transferMode": "Chunked"
+                    }
+                  }
+                }
+              },
+              "runAfter": {}
+            }
+          },
+          "parameters": {
+            "$connections": {
+              "defaultValue": {},
+              "type": "Object"
+            }
+          },
+          "triggers": {
+            "manual": {
+              "type": "Request",
+              "kind": "Http",
+              "inputs": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "topic": {
+                        "type": "string"
+                      },
+                      "subject": {
+                        "type": "string"
+                      },
+                      "eventType": {
+                        "type": "string"
+                      },
+                      "eventTime": {
+                        "type": "string"
+                      },
+                      "id": {
+                        "type": "string"
+                      },
+                      "data": {
+                        "type": "object",
+                        "properties": {
+                          "api": {
+                            "type": "string"
+                          },
+                          "clientRequestId": {
+                            "type": "string"
+                          },
+                          "requestId": {
+                            "type": "string"
+                          },
+                          "eTag": {
+                            "type": "string"
+                          },
+                          "contentType": {
+                            "type": "string"
+                          },
+                          "contentLength": {
+                            "type": "integer"
+                          },
+                          "blobType": {
+                            "type": "string"
+                          },
+                          "url": {
+                            "type": "string"
+                          },
+                          "sequencer": {
+                            "type": "string"
+                          },
+                          "storageDiagnostics": {
+                            "type": "object",
+                            "properties": {
+                              "batchId": {
+                                "type": "string"
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "dataVersion": {
+                        "type": "string"
+                      },
+                      "metadataVersion": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "topic",
+                      "subject",
+                      "eventType",
+                      "eventTime",
+                      "id",
+                      "data",
+                      "dataVersion",
+                      "metadataVersion"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "contentVersion": "1.0.0.0",
+          "outputs": {}
+        },
+        "parameters": {
+          "$connections": {
+            "value": {
+              "sharepointonline": {
+                "id": "[concat(subscription().id, '/providers/Microsoft.Web/locations/', parameters('logicAppLocation'), '/managedApis/', 'sharepointonline')]",
+                "connectionId": "[resourceId('Microsoft.Web/connections', parameters('sharepointonline_1_Connection_Name'))]",
+                "connectionName": "[parameters('sharepointonline_1_Connection_Name')]"
+              }
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/connections', parameters('sharepointonline_1_Connection_Name'))]"
+      ]
+    },
+    {
+      "type": "MICROSOFT.WEB/CONNECTIONS",
+      "apiVersion": "2018-07-01-preview",
+      "name": "[parameters('sharepointonline_1_Connection_Name')]",
+      "location": "[parameters('logicAppLocation')]",
+      "properties": {
+        "api": {
+          "id": "[concat(subscription().id, '/providers/Microsoft.Web/locations/', parameters('logicAppLocation'), '/managedApis/', 'sharepointonline')]"
+        },
+        "displayName": "[parameters('sharepointonline_1_Connection_DisplayName')]",
+        "nonSecretParameterValues": {
+          "token:TenantId": "[parameters('sharepointonline_1_token:TenantId')]"
+        }
+      }
+    }
+  ],
+  "outputs": {}
+}
